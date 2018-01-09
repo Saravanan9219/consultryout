@@ -1,0 +1,51 @@
+version: '3'
+
+networks:
+  flaskapp:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - 
+          subnet: 192.168.50.0/29
+    driver_opts:
+      com.docker.network.bridge.name: flaskapp
+
+services:
+  consul_server:
+    build: 'consul_server'
+    expose:
+      - '8500'
+      - '53'
+    ports:
+      - '8600:53/udp'
+      - '8500:8500'
+    container_name: 'consul_server'
+    networks:
+      flaskapp:
+        ipv4_address: 192.168.50.3
+
+  memcached:
+    build: 'memcached'
+    expose:
+      - '11211'
+    container_name: 'memcached'  
+    depends_on:
+      - consul_server
+    networks:
+      - flaskapp
+
+  app:
+    build: 'app'
+    expose:
+      - '5000'
+    ports:
+      - '80:5000'
+    container_name: 'app'  
+    networks:
+      - flaskapp
+      - default
+    depends_on:
+      - memcached
+    dns:
+      - 192.168.50.3
